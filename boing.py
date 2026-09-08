@@ -204,6 +204,9 @@ def p1_controls():
         move = PLAYER_SPEED
     elif keyboard.a or keyboard.up:
         move = -PLAYER_SPEED
+    if joystick_controls is not None:
+        move += joystick_controls.get_y()
+        move = min(PLAYER_SPEED, max(-PLAYER_SPEED, move))
     return move
 
 
@@ -214,6 +217,52 @@ def p2_controls():
     elif keyboard.k:
         move = -PLAYER_SPEED
     return move
+
+
+class JoystickControls:
+    def __init__(self, joystick):
+        self.joystick = joystick
+        self.previous_buttons = [False] * joystick.get_numbuttons()
+        self.pressed_buttons = set()
+        joystick.init()
+
+    def update(self):
+        buttons = {
+            button for button in range(self.joystick.get_numbuttons())
+            if self.joystick.get_button(button)
+        }
+        self.pressed_buttons = buttons - {
+            button for button, was_down in enumerate(self.previous_buttons)
+            if was_down
+        }
+        self.previous_buttons = [
+            button in buttons for button in range(self.joystick.get_numbuttons())
+        ]
+
+    def button_pressed(self, button):
+        return button in self.pressed_buttons
+
+    def get_y(self):
+        if self.joystick.get_numaxes() <= 1:
+            return 0
+        value = self.joystick.get_axis(1)
+        return 0 if abs(value) <= 0.2 else value * PLAYER_SPEED
+
+    def start_pressed(self):
+        return self.button_pressed(0)
+
+    def pause_pressed(self):
+        return self.button_pressed(2)
+
+    def escape_pressed(self):
+        return self.button_pressed(1)
+
+
+def setup_joystick():
+    pygame.joystick.init()
+    if pygame.joystick.get_count() == 0:
+        return None
+    return JoystickControls(pygame.joystick.Joystick(0))
 
 
 class State(Enum):
@@ -227,6 +276,7 @@ num_players = 1
 space_down = False
 enter_down = False
 escape_down = False
+joystick_controls = None
 
 
 def update():
@@ -234,6 +284,15 @@ def update():
     space_pressed = False
     enter_pressed = False
     escape_pressed = False
+    joystick_start_pressed = False
+    joystick_pause_pressed = False
+    joystick_escape_pressed = False
+
+    if joystick_controls is not None:
+        joystick_controls.update()
+        joystick_start_pressed = joystick_controls.start_pressed()
+        joystick_pause_pressed = joystick_controls.pause_pressed()
+        joystick_escape_pressed = joystick_controls.escape_pressed()
 
     if keyboard.space and not space_down:
         space_pressed = True
@@ -247,7 +306,7 @@ def update():
         escape_pressed = True
     escape_down = keyboard.escape
 
-    if escape_pressed:
+    if escape_pressed or joystick_escape_pressed:
         if state == State.MENU:
             sys.exit()
         state = State.MENU
@@ -255,31 +314,39 @@ def update():
         return
 
     if state == State.MENU:
-        if space_pressed:
+        if space_pressed or joystick_start_pressed:
             state = State.PLAY
             controls = [p1_controls, p2_controls if num_players == 2 else None]
             game = Game(controls)
         else:
-            if num_players == 2 and keyboard.up:
+            joystick_up = (
+                joystick_controls is not None
+                and joystick_controls.get_y() < -PLAYER_SPEED / 2
+            )
+            joystick_down = (
+                joystick_controls is not None
+                and joystick_controls.get_y() > PLAYER_SPEED / 2
+            )
+            if num_players == 2 and (keyboard.up or joystick_up):
                 sounds.up.play()
                 num_players = 1
-            elif num_players == 1 and keyboard.down:
+            elif num_players == 1 and (keyboard.down or joystick_down):
                 sounds.down.play()
                 num_players = 2
 
             game.update()
     elif state == State.PLAY:
-        if enter_pressed:
+        if enter_pressed or joystick_pause_pressed:
             state = State.PAUSED
         elif max(game.bats[0].score, game.bats[1].score) > 9:
             state = State.GAME_OVER
         else:
             game.update()
     elif state == State.PAUSED:
-        if enter_pressed:
+        if enter_pressed or joystick_pause_pressed:
             state = State.PLAY
     elif state == State.GAME_OVER:
-        if space_pressed:
+        if space_pressed or joystick_start_pressed:
             state = State.MENU
             game = Game()
 
@@ -315,7 +382,7 @@ def draw_game():
 
 
 def main():
-    global fullscreen_mode, state, game
+    global fullscreen_mode, state, game, joystick_controls
 
     fullscreen_mode = "--debug" not in sys.argv
     if fullscreen_mode:
@@ -334,6 +401,7 @@ def main():
         pass
 
     state = State.MENU
+    joystick_controls = setup_joystick()
     game = Game()
     pgzrun.go()
 
