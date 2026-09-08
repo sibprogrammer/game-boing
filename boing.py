@@ -217,20 +217,27 @@ def p2_controls():
 class State(Enum):
     MENU = 1
     PLAY = 2
-    GAME_OVER = 3
+    PAUSED = 3
+    GAME_OVER = 4
 
 
 num_players = 1
 space_down = False
+enter_down = False
 
 
 def update():
-    global state, game, num_players, space_down
+    global state, game, num_players, space_down, enter_down
     space_pressed = False
+    enter_pressed = False
 
     if keyboard.space and not space_down:
         space_pressed = True
     space_down = keyboard.space
+
+    if keyboard.RETURN and not enter_down:
+        enter_pressed = True
+    enter_down = keyboard.RETURN
 
     if state == State.MENU:
         if space_pressed:
@@ -247,10 +254,15 @@ def update():
 
             game.update()
     elif state == State.PLAY:
-        if max(game.bats[0].score, game.bats[1].score) > 9:
+        if enter_pressed:
+            state = State.PAUSED
+        elif max(game.bats[0].score, game.bats[1].score) > 9:
             state = State.GAME_OVER
         else:
             game.update()
+    elif state == State.PAUSED:
+        if enter_pressed:
+            state = State.PLAY
     elif state == State.GAME_OVER:
         if space_pressed:
             state = State.MENU
