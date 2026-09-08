@@ -224,12 +224,14 @@ class State(Enum):
 num_players = 1
 space_down = False
 enter_down = False
+escape_down = False
 
 
 def update():
-    global state, game, num_players, space_down, enter_down
+    global state, game, num_players, space_down, enter_down, escape_down
     space_pressed = False
     enter_pressed = False
+    escape_pressed = False
 
     if keyboard.space and not space_down:
         space_pressed = True
@@ -238,6 +240,17 @@ def update():
     if keyboard.RETURN and not enter_down:
         enter_pressed = True
     enter_down = keyboard.RETURN
+
+    if keyboard.escape and not escape_down:
+        escape_pressed = True
+    escape_down = keyboard.escape
+
+    if escape_pressed:
+        if state == State.MENU:
+            sys.exit()
+        state = State.MENU
+        game = Game()
+        return
 
     if state == State.MENU:
         if space_pressed:
