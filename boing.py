@@ -1,6 +1,7 @@
 import pgzero.screen
 import pgzrun
 import pygame
+import os
 import math
 import sys
 import random
@@ -18,6 +19,7 @@ screen: pgzero.screen.Screen
 WIDTH = 800
 HEIGHT = 480
 TITLE = "Boing!"
+fullscreen_mode = True
 
 HALF_WIDTH = WIDTH // 2
 HALF_HEIGHT = HEIGHT // 2
@@ -283,6 +285,26 @@ def update():
 
 
 def draw():
+    if fullscreen_mode:
+        from pgzero import game as pgzero_game
+
+        display_surface = screen.surface
+        actor_surface = pgzero_game.screen
+        field_surface = pygame.Surface((WIDTH, HEIGHT))
+        screen.surface = field_surface
+        pgzero_game.screen = field_surface
+        draw_game()
+        screen.surface = display_surface
+        pgzero_game.screen = actor_surface
+        display_surface.fill((0, 0, 0))
+        x = (display_surface.get_width() - WIDTH) // 2
+        y = (display_surface.get_height() - HEIGHT) // 2
+        display_surface.blit(field_surface, (x, y))
+    else:
+        draw_game()
+
+
+def draw_game():
     game.draw()
 
     if state == State.MENU:
@@ -292,15 +314,28 @@ def draw():
         screen.blit('over', (0, 0))
 
 
-try:
-    pygame.mixer.quit()
-    pygame.mixer.init(44100, -16, 2, 1024)
+def main():
+    global fullscreen_mode, state, game
 
-    music.play('theme')
-    music.set_volume(0.3)
-except:
-    pass
+    fullscreen_mode = "--debug" not in sys.argv
+    if fullscreen_mode:
+        from pgzero import game as pgzero_game
+        pgzero_game.DISPLAY_FLAGS |= pygame.FULLSCREEN
+    else:
+        os.environ.setdefault("SDL_VIDEO_CENTERED", "1")
 
-state = State.MENU
-game = Game()
-pgzrun.go()
+    try:
+        pygame.mixer.quit()
+        pygame.mixer.init(44100, -16, 2, 1024)
+
+        music.play('theme')
+        music.set_volume(0.3)
+    except:
+        pass
+
+    state = State.MENU
+    game = Game()
+    pgzrun.go()
+
+
+main()
