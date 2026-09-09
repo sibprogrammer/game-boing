@@ -11,9 +11,6 @@ from pgzero.actor import Actor
 from pgzero.keyboard import keyboard
 from pgzero.loaders import sounds
 
-if sys.version_info < (3, 5):
-    raise RuntimeError("Python 3.5+ is required to run this script.")
-
 screen: pgzero.screen.Screen
 
 WIDTH = 800
