@@ -201,8 +201,11 @@ def p1_controls():
         move = PLAYER_SPEED
     elif keyboard.a or keyboard.up:
         move = -PLAYER_SPEED
-    if joystick_controls is not None:
-        move += joystick_controls.get_y()
+    player_one_joysticks = (
+        joystick_controls if num_players == 1 else joystick_controls[:1]
+    )
+    if player_one_joysticks:
+        move += sum(controls.get_y() for controls in player_one_joysticks)
         move = min(PLAYER_SPEED, max(-PLAYER_SPEED, move))
     return move
 
@@ -213,6 +216,9 @@ def p2_controls():
         move = PLAYER_SPEED
     elif keyboard.k:
         move = -PLAYER_SPEED
+    if len(joystick_controls) > 1:
+        move += joystick_controls[1].get_y()
+        move = min(PLAYER_SPEED, max(-PLAYER_SPEED, move))
     return move
 
 
@@ -257,9 +263,10 @@ class JoystickControls:
 
 def setup_joystick():
     pygame.joystick.init()
-    if pygame.joystick.get_count() == 0:
-        return None
-    return JoystickControls(pygame.joystick.Joystick(0))
+    return [
+        JoystickControls(pygame.joystick.Joystick(index))
+        for index in range(min(2, pygame.joystick.get_count()))
+    ]
 
 
 class State(Enum):
@@ -273,7 +280,7 @@ num_players = 1
 space_down = False
 enter_down = False
 escape_down = False
-joystick_controls = None
+joystick_controls: list[JoystickControls] = []
 
 
 def update():
@@ -285,11 +292,18 @@ def update():
     joystick_pause_pressed = False
     joystick_escape_pressed = False
 
-    if joystick_controls is not None:
-        joystick_controls.update()
-        joystick_start_pressed = joystick_controls.start_pressed()
-        joystick_pause_pressed = joystick_controls.pause_pressed()
-        joystick_escape_pressed = joystick_controls.escape_pressed()
+    for controls in joystick_controls:
+        controls.update()
+    if joystick_controls:
+        joystick_start_pressed = any(
+            controls.start_pressed() for controls in joystick_controls
+        )
+        joystick_pause_pressed = any(
+            controls.pause_pressed() for controls in joystick_controls
+        )
+        joystick_escape_pressed = any(
+            controls.escape_pressed() for controls in joystick_controls
+        )
 
     if keyboard.space and not space_down:
         space_pressed = True
@@ -316,13 +330,13 @@ def update():
             controls = [p1_controls, p2_controls if num_players == 2 else None]
             game = Game(controls)
         else:
-            joystick_up = (
-                joystick_controls is not None
-                and joystick_controls.get_y() < -PLAYER_SPEED / 2
+            joystick_up = any(
+                controls.get_y() < -PLAYER_SPEED / 2
+                for controls in joystick_controls
             )
-            joystick_down = (
-                joystick_controls is not None
-                and joystick_controls.get_y() > PLAYER_SPEED / 2
+            joystick_down = any(
+                controls.get_y() > PLAYER_SPEED / 2
+                for controls in joystick_controls
             )
             if num_players == 2 and (keyboard.up or joystick_up):
                 sounds.up.play()
