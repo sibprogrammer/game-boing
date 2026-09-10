@@ -10,6 +10,7 @@ from pgzero import music
 from pgzero.actor import Actor
 from pgzero.keyboard import keyboard
 from pgzero.loaders import sounds
+from pygame._sdl2 import controller
 
 screen: pgzero.screen.Screen
 
@@ -228,8 +229,16 @@ class JoystickControls:
         self.previous_buttons = [False] * joystick.get_numbuttons()
         self.pressed_buttons = set()
         joystick.init()
+        controller.init()
+        self.controller = controller.Controller.from_joystick(joystick)
+        self.escape_previous_down = self.is_escape_pressed = False
 
     def update(self):
+        escape_down = (
+            self.controller.get_button(pygame.CONTROLLER_BUTTON_START) != 0
+        )
+        self.is_escape_pressed = escape_down and not self.escape_previous_down
+        self.escape_previous_down = escape_down
         buttons = {
             button for button in range(self.joystick.get_numbuttons())
             if self.joystick.get_button(button)
@@ -258,7 +267,7 @@ class JoystickControls:
         return self.button_pressed(2)
 
     def escape_pressed(self):
-        return self.button_pressed(1)
+        return self.is_escape_pressed
 
 
 def setup_joystick():
