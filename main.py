@@ -198,9 +198,9 @@ class Game:
 
 def p1_controls():
     move = 0
-    if keyboard.z or keyboard.down:
+    if keyboard.z or (num_players == 1 and keyboard.down):
         move = PLAYER_SPEED
-    elif keyboard.a or keyboard.up:
+    elif keyboard.a or (num_players == 1 and keyboard.up):
         move = -PLAYER_SPEED
     player_one_joysticks = (
         joystick_controls if num_players == 1 else joystick_controls[:1]
@@ -213,9 +213,9 @@ def p1_controls():
 
 def p2_controls():
     move = 0
-    if keyboard.m:
+    if keyboard.down:
         move = PLAYER_SPEED
-    elif keyboard.k:
+    elif keyboard.up:
         move = -PLAYER_SPEED
     if len(joystick_controls) > 1:
         move += joystick_controls[1].get_y()
