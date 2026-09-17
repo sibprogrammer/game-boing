@@ -41,5 +41,6 @@ The game starts in fullscreen mode. Run `uv run main.py --debug` for a windowed 
 
 ## Credits
 
-Boing! is based on the original work from the [Code the Classics II](https://store.rpipress.cc/products/code-the-classics-volume-ii) book and was improved by
+Boing! is based on the original work from the
+[Code the Classics](https://magazine.raspberrypi.com/books/code-the-classics-vol-I-2ed) book and was improved by
 Alexey "SibProgrammer" Yuzhakov.
